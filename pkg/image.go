@@ -3,6 +3,7 @@ package image
 import (
 	"bytes"
 	"crypto/des"
+	"fmt"
 	"io"
 	"os"
 )
@@ -15,6 +16,9 @@ func pkcs7Pad(data []byte, blockSize int) []byte {
 
 func ReadImage(path string) ([]byte, error) {
 	file, err := os.Open(path)
+	if os.IsNotExist(err) {
+		return nil, fmt.Errorf("file does not exist")
+	}
 	if err != nil {
 		return nil, err
 	}

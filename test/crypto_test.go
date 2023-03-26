@@ -9,16 +9,20 @@ import (
 
 func TestDESEncryptionDecryption(t *testing.T) {
 	key := []byte("12345678")
-	plaintext, _ := image.ReadImage("../pkg/testdata/Genshin-Impact.jpg")
+	plaintext, err := image.ReadImage("../pkg/testdata/Genshin_Impact.jpg")
+	if err != nil {
+		t.Fatalf("读取文件发生错误: %v", err)
+	}
+	iv := []byte("00000000")
 
 	// 加密
-	ciphertext, err := internal.DesEncryption(plaintext, key)
+	ciphertext, err := internal.DesEncryption(plaintext, key, iv)
 	if err != nil {
 		t.Fatalf("加密过程中发生错误: %v", err)
 	}
 
 	// 解密
-	result, err := internal.DesDecryption(ciphertext, key)
+	result, err := internal.DesDecryption(ciphertext, key, iv)
 	if err != nil {
 		t.Fatalf("解密过程中发生错误: %v", err)
 	}

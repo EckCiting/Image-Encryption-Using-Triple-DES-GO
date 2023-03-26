@@ -6,27 +6,27 @@ import (
 	"fmt"
 )
 
-func DesEncryption(data []byte, key []byte) ([]byte, error) {
+func DesEncryption(data []byte, key []byte, iv []byte) ([]byte, error) {
 	block, err := des.NewCipher(key)
 	if err != nil {
 		return nil, fmt.Errorf("error in creating cipher: %v", err)
 	}
 
 	ciphertext := make([]byte, len(data))
-	blockMode := cipher.NewCBCEncrypter(block, key)
+	blockMode := cipher.NewCBCEncrypter(block, iv)
 	blockMode.CryptBlocks(ciphertext, data)
 
 	return ciphertext, nil
 }
 
-func DesDecryption(ciphertext []byte, key []byte) ([]byte, error) {
+func DesDecryption(ciphertext []byte, key []byte, iv []byte) ([]byte, error) {
 	block, err := des.NewCipher(key)
 	if err != nil {
 		return nil, fmt.Errorf("error in creating cipher: %v", err)
 	}
 
 	plaintext := make([]byte, len(ciphertext))
-	blockMode := cipher.NewCBCDecrypter(block, key)
+	blockMode := cipher.NewCBCDecrypter(block, iv)
 	blockMode.CryptBlocks(plaintext, ciphertext)
 
 	return plaintext, nil
