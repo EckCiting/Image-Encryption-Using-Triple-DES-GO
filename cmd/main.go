@@ -8,7 +8,7 @@ import (
 
 func main() {
 	fmt.Println("hello world!")
-	fmt.Println(descore.Test())
+	fmt.Println(internal.Test())
 
 	var data, _ = image.ReadImage("pkg/testdata/Genshin_Impact.jpg")
 	fmt.Println(data)

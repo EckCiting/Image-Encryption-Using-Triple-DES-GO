@@ -1,4 +1,4 @@
-package descore
+package internal
 
 import (
 	"fmt"

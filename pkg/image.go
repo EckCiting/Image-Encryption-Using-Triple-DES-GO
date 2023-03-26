@@ -1,9 +1,17 @@
 package image
 
 import (
+	"bytes"
+	"crypto/des"
 	"io"
 	"os"
 )
+
+func pkcs7Pad(data []byte, blockSize int) []byte {
+	padding := blockSize - len(data)%blockSize
+	padText := bytes.Repeat([]byte{byte(padding)}, padding)
+	return append(data, padText...) // 将 padText 切片中的元素逐个展开，作为函数 append 的可变参数传入。
+}
 
 func ReadImage(path string) ([]byte, error) {
 	file, err := os.Open(path)
@@ -16,6 +24,9 @@ func ReadImage(path string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	blockSize := des.BlockSize
+	data = pkcs7Pad(data, blockSize)
 
 	return data, nil // error is nil
 }
