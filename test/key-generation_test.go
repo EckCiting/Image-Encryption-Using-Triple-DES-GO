@@ -22,8 +22,14 @@ func TestMakeKey(t *testing.T) {
 	// verify that two different keys are generated for different salts
 	key1 := internal.MakeKey(password, []byte("differentSalt1"), salt2)
 	key2 := internal.MakeKey(password, []byte("differentSalt2"), salt2)
+	key3 := internal.MakeKey(password, []byte("differentSalt1"), salt2)
 
 	if bytes.Equal(key1, key2) {
 		t.Errorf("keys generated for different salts are equal")
 	}
+
+	if !bytes.Equal(key1, key3) {
+		t.Errorf("keys generated for same salts are not equal")
+	}
+
 }

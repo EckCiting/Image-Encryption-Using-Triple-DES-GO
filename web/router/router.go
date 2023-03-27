@@ -9,7 +9,8 @@ func SetupRouter() *gin.Engine {
 	r := gin.Default()
 
 	imageCtrl := &controller.ImageController{}
-	r.POST("/uploadImage", imageCtrl.UploadImage)
+	r.POST("/encryptImage", imageCtrl.EncryptImage)
+	r.POST("/decryptImage", imageCtrl.DecryptImage)
 
 	return r
 }
