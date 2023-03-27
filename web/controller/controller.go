@@ -2,7 +2,6 @@ package controller
 
 import (
 	"fmt"
-	"io"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -11,13 +10,14 @@ import (
 type ImageController struct{}
 
 func (ic *ImageController) UploadImage(c *gin.Context) {
-	body, err := io.ReadAll(c.Request.Body)
+	file, err := c.FormFile("image")
 	if err != nil {
+		fmt.Printf("failed to do something: %v\n", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Bad Request"})
 		return
 	}
 
-	fmt.Println(body)
+	fmt.Println(file)
 
 	c.JSON(200, gin.H{
 		"message": "success",
