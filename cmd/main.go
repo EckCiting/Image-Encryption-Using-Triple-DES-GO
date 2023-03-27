@@ -1,16 +1,13 @@
 package main
 
 import (
-	"Image-Encryption-Using-Triple-DES-GO/internal"
-	"Image-Encryption-Using-Triple-DES-GO/pkg"
-	"fmt"
+	"Image-Encryption-Using-Triple-DES-GO/web/router"
 )
 
 func main() {
-	fmt.Println("hello world!")
-	fmt.Println(internal.Test())
 
-	var data, _ = image.ReadImage("pkg/testdata/Genshin_Impact.jpg")
-	fmt.Println(data)
+	//r := gin.Default()
+	r := router.SetupRouter()
+	r.Run() // listen and serve on 0.0.0.0:8080
 
 }
