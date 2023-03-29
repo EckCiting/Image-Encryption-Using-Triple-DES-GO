@@ -9,7 +9,7 @@ import (
 
 func TestDESEncryptionDecryption(t *testing.T) {
 	key := []byte("12345678")
-	plaintext, err := image.ReadImage("../pkg/testdata/Genshin_Impact.jpg")
+	plaintext, err := pkg.ReadImage("../pkg/testdata/Genshin_Impact.jpg")
 	if err != nil {
 		t.Fatalf("读取文件发生错误: %v", err)
 	}
@@ -35,7 +35,7 @@ func TestDESEncryptionDecryption(t *testing.T) {
 
 func TestTDESEncryptionDecryption(t *testing.T) {
 	keys := []byte("123456789012345678901234")
-	plaintext, err := image.ReadImage("../pkg/testdata/Genshin_Impact.jpg")
+	plaintext, err := pkg.ReadImage("../pkg/testdata/Genshin_Impact.jpg")
 	if err != nil {
 		t.Fatalf("读取文件发生错误: %v", err)
 	}

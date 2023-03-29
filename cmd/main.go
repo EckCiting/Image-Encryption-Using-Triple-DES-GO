@@ -1,22 +1,17 @@
 package main
 
 import (
-	"Image-Encryption-Using-Triple-DES-GO/web/models"
+	"Image-Encryption-Using-Triple-DES-GO/pkg"
 	"Image-Encryption-Using-Triple-DES-GO/web/router"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
+	"fmt"
 )
 
 func main() {
 
-	db, err := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
+	err := pkg.CreatDB()
 	if err != nil {
-		panic("failed to connect database")
-	}
-	// Auto Migrate
-	err = db.AutoMigrate(&models.Image{})
-	if err != nil {
-		panic("failed to migrate models")
+		fmt.Printf("failed to start database: %v\n", err)
+		return
 	}
 
 	//r := gin.Default()
