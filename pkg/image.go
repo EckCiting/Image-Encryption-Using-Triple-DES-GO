@@ -3,6 +3,8 @@ package pkg
 import (
 	"bytes"
 	"crypto/des"
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
@@ -33,4 +35,9 @@ func ReadImage(path string) ([]byte, error) {
 	data = Pkcs7Pad(data, blockSize)
 
 	return data, nil // error is nil
+}
+func CalculateMD5Hash(fileContent []byte) string {
+	h := md5.New()
+	h.Write(fileContent)
+	return hex.EncodeToString(h.Sum(nil))
 }

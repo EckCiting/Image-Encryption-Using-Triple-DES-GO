@@ -2,7 +2,6 @@ package pkg
 
 import (
 	"Image-Encryption-Using-Triple-DES-GO/web/models"
-	"crypto/md5"
 	"encoding/hex"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -40,8 +39,26 @@ func StoreImageToDB(filename string, filehash string, exptime time.Time, salts [
 	return nil
 }
 
-func CalculateMD5Hash(fileContent []byte) string {
-	h := md5.New()
-	h.Write(fileContent)
-	return hex.EncodeToString(h.Sum(nil))
+func CleanExpSalt() {
+	now := time.Now().UTC()
+
+	var images []models.Image
+	DB.Where("expire_date < ?", now).Find(&images)
+	for _, image := range images {
+		image.Salt = ""
+		DB.Save(&image)
+	}
+}
+
+// StartCleanExpSaltTicker 每小时调用一次 CleanExpSalt
+func StartCleanExpSaltTicker() {
+	ticker := time.NewTicker(time.Hour)
+	defer ticker.Stop()
+
+	for {
+		select { // 阻塞 goroutine
+		case <-ticker.C: // C表示一个channel,ticker.C 会周期性地向 channel 发送一个时间点的值，表示当前时间到达了一个周期
+			CleanExpSalt()
+		}
+	}
 }

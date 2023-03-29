@@ -23,10 +23,11 @@ func (ic *ImageController) EncryptImage(c *gin.Context) {
 	password := c.PostForm("password")
 	exptime, err := time.Parse("2006-01-02T15:04:05", c.PostForm("exptime"))
 	if err != nil {
-		fmt.Printf("failed to do something: %v\n", err)
+		fmt.Printf("expDate format error: %v\n", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Bad Request"})
 		return
 	}
+	pkg.CleanExpSalt()
 
 	// Read image in the form
 	f, err := file.Open()
@@ -86,6 +87,7 @@ func (ic *ImageController) DecryptImage(c *gin.Context) {
 		return
 	}
 
+	pkg.CleanExpSalt()
 	f, err := file.Open()
 	if err != nil {
 
@@ -116,6 +118,10 @@ func (ic *ImageController) DecryptImage(c *gin.Context) {
 		salt, err := hex.DecodeString(saltString)
 		if err != nil {
 			panic(err)
+		}
+		if len(saltString) == 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Bad Request"})
+			return
 		}
 		salt1 := salt[:8]
 		salt2 := salt[8:]
