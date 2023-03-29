@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"time"
 
@@ -20,6 +21,12 @@ type ImageController struct{}
 
 func (ic *ImageController) EncryptImage(c *gin.Context) {
 	file, err := c.FormFile("image")
+	if err != nil {
+		fmt.Printf("image format error: %v\n", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Bad Request"})
+		return
+	}
+
 	password := c.PostForm("password")
 	exptime, err := time.Parse("2006-01-02T15:04:05", c.PostForm("exptime"))
 	if err != nil {
@@ -32,12 +39,23 @@ func (ic *ImageController) EncryptImage(c *gin.Context) {
 	// Read image in the form
 	f, err := file.Open()
 	if err != nil {
-
+		fmt.Printf("failed to read the image in the form: %v\n", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Bad Request"})
+		return
 	}
-	defer f.Close()
+	defer func(f multipart.File) {
+		err := f.Close()
+		if err != nil {
+			fmt.Printf("failed to close the image: %v\n", err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Bad Request"})
+			return
+		}
+	}(f)
 	buf := bytes.NewBuffer(nil)
 	if _, err := io.Copy(buf, f); err != nil {
-
+		fmt.Printf("failed to read the image in the form: %v\n", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Bad Request"})
+		return
 	}
 
 	filename := file.Filename
@@ -75,7 +93,10 @@ func (ic *ImageController) EncryptImage(c *gin.Context) {
 
 	c.Header("Content-Type", "application/octet-stream")
 	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", "enc_"+filename))
-	c.Writer.Write(data)
+	_, err = c.Writer.Write(data)
+	if err != nil {
+		return
+	}
 }
 
 func (ic *ImageController) DecryptImage(c *gin.Context) {
@@ -90,13 +111,24 @@ func (ic *ImageController) DecryptImage(c *gin.Context) {
 	pkg.CleanExpSalt()
 	f, err := file.Open()
 	if err != nil {
-
+		fmt.Printf("failed to clean the salt %v\n", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Bad Request"})
+		return
 	}
-	defer f.Close()
+	defer func(f multipart.File) {
+		err := f.Close()
+		if err != nil {
+			fmt.Printf("failed to close the image: %v\n", err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Bad Request"})
+			return
+		}
+	}(f)
 
 	buf := bytes.NewBuffer(nil)
 	if _, err := io.Copy(buf, f); err != nil {
-
+		fmt.Printf("failed to read the image in the form: %v\n", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Bad Request"})
+		return
 	}
 
 	//blockSize := des.BlockSize
@@ -109,10 +141,13 @@ func (ic *ImageController) DecryptImage(c *gin.Context) {
 	result := pkg.DB.Where("image_hash = ?", filehash).First(&image)
 
 	if result.Error != nil {
-		// 处理查询出错的情况
+		fmt.Printf("failed to find the image in the database: %v\n", result.Error)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Bad Request"})
+		return
 	}
 	if result.RowsAffected == 0 {
 		// 未找到对应记录
+		fmt.Printf("no matching images in the database")
 	} else {
 		saltString := image.Salt
 		salt, err := hex.DecodeString(saltString)
@@ -138,7 +173,11 @@ func (ic *ImageController) DecryptImage(c *gin.Context) {
 		}
 		filename := file.Filename
 		c.Header("Content-Type", "application/octet-stream")
-		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
-		c.Writer.Write(data)
+		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", "dec_"+filename[4:]))
+
+		_, err = c.Writer.Write(data)
+		if err != nil {
+			return
+		}
 	}
 }
