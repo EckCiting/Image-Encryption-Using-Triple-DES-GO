@@ -61,12 +61,6 @@ var S_boxes = [][][]int{
 		{15, 12, 8, 2, 4, 9, 1, 7, 5, 11, 3, 14, 10, 0, 6, 13},
 	},
 	{
-		{14, 4, 13, 1, 2, 15, 11, 8, 3, 10, 6, 12, 5, 9, 0, 7},
-		{0, 15, 7, 4, 14, 2, 13, 1, 10, 6, 12, 11, 9, 5, 3, 8},
-		{4, 1, 14, 8, 13, 6, 2, 11, 15, 12, 9, 7, 3, 10, 5, 0},
-		{15, 12, 8, 2, 4, 9, 1, 7, 5, 11, 3, 14, 10, 0, 6, 13},
-	},
-	{
 		{15, 1, 8, 14, 6, 11, 3, 4, 9, 7, 2, 13, 12, 0, 5, 10},
 		{3, 13, 4, 7, 15, 2, 8, 14, 12, 0, 1, 10, 6, 9, 11, 5},
 		{0, 14, 7, 11, 10, 4, 13, 1, 5, 8, 12, 6, 9, 3, 2, 15},
@@ -137,11 +131,10 @@ var shift_table = []int{1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1}
 /*
  * Convert 8 bytes (64 bits) to String
  */
-func byteToString(bytes []byte) string {
+func ByteToString(bytes []byte) string {
 	binaryStrings := ""
-	for i := 0; i < 8; i++ {
-		t := fmt.Sprintf("%08b", bytes[i]) // Convert bytes[i] to an 8-bit binary string
-		binaryStrings += t
+	for _, v := range bytes {
+		binaryStrings += fmt.Sprintf("%08b", v)
 	}
 	return binaryStrings
 }
@@ -150,21 +143,32 @@ func byteToString(bytes []byte) string {
  * Convert 64 length String to 8 bytes (64 bits)
  */
 
-func stringToBytes(s string) []byte {
-	var t [8]byte
-	for i := 0; i < 8; i++ {
-		subs := s[i*8 : i*8+8] // pick 8 bit length and convert to one byte
-
-		// 这个函数返回两个值，第一个值是转换后的整数值，第二个值是错误信息（如果有的话，否则返回 nil）
-		val, _ := strconv.ParseInt(subs, 2, 0) //2: binary format. 0: int64 out
-		t[i] = byte(val)
+func StringToBytes(s string) []byte {
+	var t []byte
+	for i := 0; i < len(s); i += 8 {
+		if i+8 > len(s) {
+			break
+		}
+		subs := s[i : i+8]
+		val, _ := strconv.ParseUint(subs, 2, 8)
+		t = append(t, byte(val))
 	}
-	return t[:]
+	return t
+}
+
+func Cipher(bytes, originalKey []byte, keyType int) []byte {
+	var res []byte
+	for i := 0; i < len(bytes)/8; i++ {
+		block := bytes[i*8 : i*8+8]
+		tmp := DESBlockOperation(block, originalKey, keyType)
+		res = append(res, tmp...)
+	}
+	return res
 }
 
 func generateSubKeys(originalKey []byte) []string {
 	// convert to binary
-	keyBinary := byteToString(originalKey)
+	keyBinary := ByteToString(originalKey)
 
 	// Parity drop
 	keyBinaryPart := strings.Builder{}
@@ -177,6 +181,7 @@ func generateSubKeys(originalKey []byte) []string {
 	C0 := keyBinaryPart.String()[:28]
 	D0 := keyBinaryPart.String()[28:]
 	for i := 0; i < 16; i++ {
+		// shift left
 		C0 = C0[shift_table[i]:] + C0[:shift_table[i]]
 		D0 = D0[shift_table[i]:] + D0[:shift_table[i]]
 		C0D0 := C0 + D0
@@ -192,6 +197,98 @@ func generateSubKeys(originalKey []byte) []string {
 	return subKeys
 }
 
-func Test() string {
-	return "hello"
+func Xor(s1, s2 string) string {
+	var res string
+	for i := 0; i < len(s1); i++ {
+		if s1[i] == s2[i] {
+			res += "0"
+		} else {
+			res += "1"
+		}
+	}
+	return res
+}
+
+func DESBlockOperation(plaintext []byte, originalKey []byte, types int) []byte {
+
+	// 这里是将 bytes 转换成 01 字符串
+	// 而且string是不可变的，所以用了一些rune
+	// 我知道这样写很奇怪，等有空再改吧
+
+	// convert to binary string
+	plaintextBinaryString := ByteToString(plaintext)
+
+	// Initial permutation
+	substitutePlaintext := strings.Builder{}
+	for i := 0; i < 64; i++ {
+		substitutePlaintext.WriteByte(plaintextBinaryString[IP_table[i]-1])
+	}
+	//fmt.Println(substitutePlaintext.String()) // Pass
+
+	// Split into 32-bit Left and Right part
+	L := substitutePlaintext.String()[:32]
+	R := substitutePlaintext.String()[32:]
+
+	//fmt.Println(L, R) //Pass
+
+	// generate keys
+	subKeys := generateSubKeys(originalKey)
+	if types == DECRYPT_MODE {
+		subKeyTmp := generateSubKeys(originalKey)
+		for i := 0; i < 16; i++ {
+			subKeys[i] = subKeyTmp[15-i]
+		}
+	}
+
+	//for _, subkey := range subKeys {
+	//	fmt.Println(subkey)
+	//} // Pass
+
+	// 16 rounds operation
+	for i := 0; i < 16; i++ {
+		// Expand D-box (E permutation)
+		Rtmp := make([]byte, 48)
+		for j := 0; j < 48; j++ {
+			Rtmp[j] = R[E_table[j]-1]
+		}
+		//fmt.Println(string(Rtmp)) // pass
+		// xor
+		Rtmp = []byte((Xor(string(Rtmp), subKeys[i])))
+		//fmt.Println(string(Rtmp)) // pass
+
+		// S-Box compression
+		Rtmp2 := strings.Builder{}
+		for j := 0; j < 8; j++ {
+			// each 6-bit unit
+			unit := string(Rtmp[j*6 : j*6+6])
+
+			row, _ := strconv.ParseInt(string(unit[0])+string(unit[5]), 2, 8)
+			col, _ := strconv.ParseInt(string(unit[1:5]), 2, 8)
+			val := S_boxes[j][row][col]
+			Rtmp2.WriteString(fmt.Sprintf("%04b", val))
+		}
+		//fmt.Println(R) // pass
+		// P-box permutation
+		Rtmp = make([]byte, 32)
+		for j := 0; j < 32; j++ {
+			Rtmp[j] = Rtmp2.String()[P_table[j]-1]
+		}
+		//fmt.Println(string(Rtmp)) // pass
+
+		// swap in 15 rounds
+		if i != 15 {
+			L, R = R, Xor(L, string(Rtmp))
+		} else {
+			L = Xor(L, string(Rtmp))
+		}
+		//fmt.Printf("L%d: %s\n", i+1, L)
+		//fmt.Printf("R%d: %s\n", i+1, R) // pass
+	}
+	LR := L + R
+	// Final permutation
+	ciphertext := strings.Builder{}
+	for i := 0; i < 64; i++ {
+		ciphertext.WriteByte(LR[IP_table_reverse[i]-1])
+	}
+	return StringToBytes(ciphertext.String())
 }
